@@ -153,6 +153,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+      setMessage({ text: 'A imagem é muito grande. O tamanho máximo permitido é 5MB.', type: 'error' });
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage({ text: '', type: '' });
 
@@ -162,13 +167,27 @@ export default function AdminPage() {
       // Se houver um novo arquivo de imagem, faz o upload
       if (imageFile) {
         try {
-          const fileName = `products/${Date.now()}_${imageFile.name}`;
+          const fileName = `products/${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
           const storageRef = ref(storage, fileName);
-          const snapshot = await uploadBytes(storageRef, imageFile);
+          
+          // Adiciona um timeout de 15 segundos para o upload não ficar em loop infinito
+          const uploadPromise = uploadBytes(storageRef, imageFile);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("TIMEOUT")), 15000)
+          );
+          
+          const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
           finalImageUrl = await getDownloadURL(snapshot.ref);
-        } catch (uploadError) {
+        } catch (uploadError: any) {
           console.error("Erro no upload:", uploadError);
-          setMessage({ text: 'Erro ao fazer upload da imagem. Verifique se o Firebase Storage está ativado.', type: 'error' });
+          if (uploadError.message === "TIMEOUT" || uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/unknown') {
+            setMessage({ 
+              text: 'Erro: O Firebase Storage não está ativado. Por favor, acesse o painel do Firebase, vá em "Storage" e clique em "Começar" (Get Started).', 
+              type: 'error' 
+            });
+          } else {
+            setMessage({ text: 'Erro ao fazer upload da imagem. Tente uma imagem menor.', type: 'error' });
+          }
           setIsSubmitting(false);
           return;
         }

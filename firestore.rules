@@ -44,7 +44,20 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
     }
 
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'luizhenriquemachado1602@gmail.com';
+    }
+
     // Domain Validators
+    function isValidProduct() {
+      return hasOnlyAllowedFields(['name', 'description', 'price', 'imageUrl', 'reactions']) &&
+             validStringLength('name', 1, 100) &&
+             validStringLength('description', 1, 1000) &&
+             isPositive('price') &&
+             validStringLength('imageUrl', 1, 1000) &&
+             request.resource.data.reactions is map;
+    }
+
     function isValidComment() {
       return hasOnlyAllowedFields(['productId', 'text', 'author', 'createdAt']) &&
              validStringLength('productId', 1, 100) &&
@@ -62,9 +75,9 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow create: if false; // Only admins can create products (via console for now)
-      allow delete: if false;
-      allow update: if isValidReactionUpdate();
+      allow create: if isAdmin() && isValidProduct();
+      allow delete: if isAdmin();
+      allow update: if isAdmin() || isValidReactionUpdate();
     }
 
     match /comments/{commentId} {

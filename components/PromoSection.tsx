@@ -1,32 +1,51 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Tag } from 'lucide-react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const PROMO_PRODUCTS = [
-  {
-    id: 'promo-1',
-    name: 'Saída de Praia Macramê',
-    description: 'Trabalho artesanal exclusivo. O toque boho chic que seu verão pede.',
-    oldPrice: 199.90,
-    price: 149.90,
-    imageUrl: 'https://picsum.photos/seed/macrame/400/500'
-  },
-  {
-    id: 'promo-2',
-    name: 'Chapéu Paris Aba Larga',
-    description: 'Proteção com muito estilo. Palha natural com fita personalizada.',
-    oldPrice: 129.90,
-    price: 89.90,
-    imageUrl: 'https://picsum.photos/seed/chapeu/400/500'
-  }
-];
+interface PromoProduct {
+  id: string;
+  name: string;
+  description: string;
+  oldPrice?: number;
+  price: number;
+  imageUrl: string;
+}
 
 export default function PromoSection() {
+  const [promoProducts, setPromoProducts] = useState<PromoProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'products'), where('isPromo', '==', true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const productsData: PromoProduct[] = [];
+      snapshot.forEach((doc) => {
+        productsData.push({ id: doc.id, ...doc.data() } as PromoProduct);
+      });
+      setPromoProducts(productsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching promo products:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(price);
   };
+
+  if (loading || promoProducts.length === 0) {
+    return null; // Oculta a seção se estiver carregando ou não houver promoções
+  }
 
   return (
     <section className="bg-peach/10 py-16 border-y border-peach/20">
@@ -37,7 +56,7 @@ export default function PromoSection() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {PROMO_PRODUCTS.map((product) => {
+          {promoProducts.map((product) => {
             const whatsappMessage = encodeURIComponent(`Olá, quero aproveitar a oferta especial da peça ${product.name} por ${formatPrice(product.price)}!`);
             const whatsappUrl = `https://wa.me/5522998556724?text=${whatsappMessage}`;
 
@@ -61,7 +80,9 @@ export default function PromoSection() {
                   <p className="text-gray-600 text-sm mb-4">{product.description}</p>
                   
                   <div className="mb-6">
-                    <span className="text-gray-400 line-through text-sm mr-2">{formatPrice(product.oldPrice)}</span>
+                    {product.oldPrice && (
+                      <span className="text-gray-400 line-through text-sm mr-2">{formatPrice(product.oldPrice)}</span>
+                    )}
                     <span className="font-bold text-2xl text-ocean">{formatPrice(product.price)}</span>
                   </div>
                   

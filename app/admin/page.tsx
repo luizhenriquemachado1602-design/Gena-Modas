@@ -17,6 +17,8 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string;
+  isPromo?: boolean;
+  oldPrice?: number;
 }
 
 // Função para otimizar a imagem e converter para Base64
@@ -73,6 +75,8 @@ export default function AdminPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [isPromo, setIsPromo] = useState(false);
+  const [oldPrice, setOldPrice] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -137,6 +141,8 @@ export default function AdminPage() {
     setName('');
     setDescription('');
     setPrice('');
+    setIsPromo(false);
+    setOldPrice('');
     setImageFile(null);
     setCurrentImageUrl('');
     setImagePreview(null);
@@ -148,6 +154,8 @@ export default function AdminPage() {
     setName(product.name);
     setDescription(product.description);
     setPrice(product.price.toString());
+    setIsPromo(product.isPromo || false);
+    setOldPrice(product.oldPrice ? product.oldPrice.toString() : '');
     setCurrentImageUrl(product.imageUrl);
     setImagePreview(product.imageUrl);
     setImageFile(null);
@@ -175,6 +183,11 @@ export default function AdminPage() {
     e.preventDefault();
     if (!name || !description || !price) {
       setMessage({ text: 'Preencha todos os campos obrigatórios.', type: 'error' });
+      return;
+    }
+
+    if (isPromo && !oldPrice) {
+      setMessage({ text: 'Preencha o preço antigo para produtos em promoção.', type: 'error' });
       return;
     }
 
@@ -216,24 +229,26 @@ export default function AdminPage() {
         }
       }
 
+      const productData: any = {
+        name: name.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        imageUrl: finalImageUrl,
+        isPromo: isPromo
+      };
+
+      if (isPromo && oldPrice) {
+        productData.oldPrice = parseFloat(oldPrice);
+      }
+
       if (editingId) {
         // Atualizar produto existente
-        await updateDoc(doc(db, 'products', editingId), {
-          name: name.trim(),
-          description: description.trim(),
-          price: parseFloat(price),
-          imageUrl: finalImageUrl
-        });
+        await updateDoc(doc(db, 'products', editingId), productData);
         setMessage({ text: 'Produto atualizado com sucesso!', type: 'success' });
       } else {
         // Criar novo produto
-        await addDoc(collection(db, 'products'), {
-          name: name.trim(),
-          description: description.trim(),
-          price: parseFloat(price),
-          imageUrl: finalImageUrl,
-          reactions: {}
-        });
+        productData.reactions = {};
+        await addDoc(collection(db, 'products'), productData);
         setMessage({ text: 'Produto adicionado com sucesso!', type: 'success' });
       }
       
@@ -369,6 +384,35 @@ export default function AdminPage() {
                 />
               </div>
 
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="checkbox"
+                  id="isPromo"
+                  checked={isPromo}
+                  onChange={(e) => setIsPromo(e.target.checked)}
+                  className="w-5 h-5 text-ocean rounded border-gray-300 focus:ring-ocean"
+                />
+                <label htmlFor="isPromo" className="text-sm font-bold text-gray-700 cursor-pointer">
+                  Destacar como Promoção Especial
+                </label>
+              </div>
+
+              {isPromo && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Preço Antigo (R$)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    value={oldPrice}
+                    onChange={(e) => setOldPrice(e.target.value)}
+                    placeholder="Ex: 199.90"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-peach focus:border-transparent"
+                    required={isPromo}
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Imagem da Galeria</label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-peach transition-colors relative overflow-hidden group">
@@ -452,6 +496,13 @@ export default function AdminPage() {
                       <p className="text-gold font-bold text-sm mb-2">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
                       </p>
+                      <div className="flex gap-2 mt-auto">
+                        {product.isPromo && (
+                          <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded-md uppercase self-start mb-2">
+                            Promo
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-2 mt-auto">
                         <button 
                           onClick={() => handleEdit(product)}

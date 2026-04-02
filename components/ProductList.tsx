@@ -23,7 +23,11 @@ export default function ProductList() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const productsData: Product[] = [];
       snapshot.forEach((doc) => {
-        productsData.push({ id: doc.id, ...doc.data() } as Product);
+        const data = doc.data();
+        // Filtra para não mostrar produtos da promoção na vitrine principal
+        if (!data.isPromo) {
+          productsData.push({ id: doc.id, ...data } as Product);
+        }
       });
       setProducts(productsData);
       setLoading(false);

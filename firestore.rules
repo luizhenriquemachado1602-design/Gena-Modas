@@ -54,7 +54,7 @@ service cloud.firestore {
              validStringLength('name', 1, 100) &&
              validStringLength('description', 1, 1000) &&
              isPositive('price') &&
-             validStringLength('imageUrl', 1, 1000) &&
+             validStringLength('imageUrl', 1, 1048487) &&
              request.resource.data.reactions is map;
     }
 

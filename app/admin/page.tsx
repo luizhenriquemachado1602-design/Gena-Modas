@@ -19,8 +19,8 @@ interface Product {
   imageUrl: string;
 }
 
-// Função para otimizar a imagem antes do upload
-const compressImage = (file: File): Promise<File> => {
+// Função para otimizar a imagem e converter para Base64
+const compressImageToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -49,16 +49,10 @@ const compressImage = (file: File): Promise<File> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".webp"), {
-              type: 'image/webp',
-            });
-            resolve(newFile);
-          } else {
-            reject(new Error('Falha ao converter imagem'));
-          }
-        }, 'image/webp', 0.8); // Qualidade 80% e formato WebP
+        
+        // Converte direto para Base64 (Data URL) com qualidade 80% WebP
+        const base64String = canvas.toDataURL('image/webp', 0.8);
+        resolve(base64String);
       };
       img.onerror = (error) => reject(error);
     };
@@ -167,17 +161,6 @@ export default function AdminPage() {
     try {
       await deleteDoc(doc(db, 'products', productToDelete.id));
       
-      // Tenta deletar a imagem do Storage se for uma URL do Firebase
-      if (productToDelete.imageUrl.includes('firebasestorage')) {
-        try {
-          const imageRef = ref(storage, productToDelete.imageUrl);
-          await deleteObject(imageRef);
-        } catch (storageError) {
-          console.error("Erro ao deletar imagem do storage:", storageError);
-          // Não impede a exclusão do documento se a imagem falhar
-        }
-      }
-      
       setMessage({ text: 'Produto excluído com sucesso!', type: 'success' });
       if (editingId === productToDelete.id) resetForm();
     } catch (error) {
@@ -211,34 +194,23 @@ export default function AdminPage() {
     try {
       let finalImageUrl = currentImageUrl;
 
-      // Se houver um novo arquivo de imagem, faz o upload
+      // Se houver um novo arquivo de imagem, converte para Base64
       if (imageFile) {
         try {
           setMessage({ text: 'Otimizando imagem...', type: 'success' });
-          const optimizedFile = await compressImage(imageFile);
+          // Converte a imagem para uma string Base64 leve (WebP)
+          finalImageUrl = await compressImageToBase64(imageFile);
           
-          setMessage({ text: 'Fazendo upload...', type: 'success' });
-          const fileName = `products/${Date.now()}_${optimizedFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          const storageRef = ref(storage, fileName);
-          
-          // Adiciona um timeout de 15 segundos para o upload não ficar em loop infinito
-          const uploadPromise = uploadBytes(storageRef, optimizedFile);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("TIMEOUT")), 15000)
-          );
-          
-          const snapshot = await Promise.race([uploadPromise, timeoutPromise]) as any;
-          finalImageUrl = await getDownloadURL(snapshot.ref);
-        } catch (uploadError: any) {
-          console.error("Erro no upload:", uploadError);
-          if (uploadError.message === "TIMEOUT" || uploadError.code === 'storage/unauthorized' || uploadError.code === 'storage/unknown') {
-            setMessage({ 
-              text: 'Erro: O Firebase Storage não está ativado. Por favor, acesse o painel do Firebase, vá em "Storage" e clique em "Começar" (Get Started).', 
-              type: 'error' 
-            });
-          } else {
-            setMessage({ text: 'Erro ao fazer upload da imagem. Tente uma imagem menor.', type: 'error' });
+          // Verifica se o tamanho da string Base64 não excede o limite do Firestore (~1MB)
+          // 1MB em Base64 é aproximadamente 1.33MB de caracteres
+          if (finalImageUrl.length > 1048487) {
+            setMessage({ text: 'A imagem otimizada ainda é muito grande. Tente uma foto com menos detalhes.', type: 'error' });
+            setIsSubmitting(false);
+            return;
           }
+        } catch (uploadError: any) {
+          console.error("Erro ao processar imagem:", uploadError);
+          setMessage({ text: 'Erro ao processar a imagem.', type: 'error' });
           setIsSubmitting(false);
           return;
         }

@@ -19,6 +19,53 @@ interface Product {
   imageUrl: string;
 }
 
+// Função para otimizar a imagem antes do upload
+const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1080;
+        const MAX_HEIGHT = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".webp"), {
+              type: 'image/webp',
+            });
+            resolve(newFile);
+          } else {
+            reject(new Error('Falha ao converter imagem'));
+          }
+        }, 'image/webp', 0.8); // Qualidade 80% e formato WebP
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -167,11 +214,15 @@ export default function AdminPage() {
       // Se houver um novo arquivo de imagem, faz o upload
       if (imageFile) {
         try {
-          const fileName = `products/${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          setMessage({ text: 'Otimizando imagem...', type: 'success' });
+          const optimizedFile = await compressImage(imageFile);
+          
+          setMessage({ text: 'Fazendo upload...', type: 'success' });
+          const fileName = `products/${Date.now()}_${optimizedFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
           const storageRef = ref(storage, fileName);
           
           // Adiciona um timeout de 15 segundos para o upload não ficar em loop infinito
-          const uploadPromise = uploadBytes(storageRef, imageFile);
+          const uploadPromise = uploadBytes(storageRef, optimizedFile);
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("TIMEOUT")), 15000)
           );

@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-ocean: #003366;
+  --color-peach: #FFB88C;
+  --color-gold: #D4AF37;
+  --color-offwhite: #FAF9F6;
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-offwhite);
+  color: var(--color-ocean);
+}

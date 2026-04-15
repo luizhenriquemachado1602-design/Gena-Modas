@@ -9,7 +9,7 @@ import { PackagePlus, LogOut, Loader2, Edit, Trash2, Image as ImageIcon, X } fro
 import Header from '@/components/Header';
 import Image from 'next/image';
 
-const ADMIN_EMAIL = 'luizhenriquemachado1602@gmail.com';
+const ADMIN_EMAILS = ['luizhenriquemachado1602@gmail.com', 'genaina0011111@gmail.com'];
 
 interface Product {
   id: string;
@@ -97,7 +97,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (user && user.email === ADMIN_EMAIL) {
+    if (user && user.email && ADMIN_EMAILS.includes(user.email)) {
       setLoadingProducts(true);
       const q = query(collection(db, 'products'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -286,7 +286,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  if (!user.email || !ADMIN_EMAILS.includes(user.email)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-offwhite px-4">
         <div className="bg-white p-8 rounded-2xl shadow-md max-w-md w-full text-center border border-gray-100">

@@ -45,7 +45,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'luizhenriquemachado1602@gmail.com';
+      return request.auth != null && (request.auth.token.email == 'luizhenriquemachado1602@gmail.com' || request.auth.token.email == 'genaina0011111@gmail.com');
     }
 
     // Domain Validators

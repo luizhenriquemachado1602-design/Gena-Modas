@@ -16,7 +16,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  imageUrl: string;
+  imageUrl?: string; // Mantido para compatibilidade passada
+  imageUrls?: string[];
   isPromo?: boolean;
   oldPrice?: number;
 }
@@ -77,9 +78,9 @@ export default function AdminPage() {
   const [price, setPrice] = useState('');
   const [isPromo, setIsPromo] = useState(false);
   const [oldPrice, setOldPrice] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [currentImageUrls, setCurrentImageUrls] = useState<string[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
@@ -129,10 +130,37 @@ export default function AdminPage() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      
+      // Limit to 3 files max combined with current uploaded images? 
+      // Actually, just limit the overall input files up to 3 for now.
+      if (files.length > 3) {
+        setMessage({ text: 'Por favor, selecione no máximo 3 imagens.', type: 'error' });
+        return;
+      }
+
+      const validFiles: File[] = [];
+      const previews: string[] = [];
+
+      for (const file of files) {
+        if (file.size > 5 * 1024 * 1024) {
+          setMessage({ text: `A imagem ${file.name} é muito grande. Tamanho máximo é 5MB.`, type: 'error' });
+          return;
+        }
+        
+        if (!file.type.match(/image\/(jpeg|png|webp)/)) {
+          setMessage({ text: `O arquivo ${file.name} tem formato inválido. Use JPG, PNG ou WEBP.`, type: 'error' });
+          return;
+        }
+
+        validFiles.push(file);
+        previews.push(URL.createObjectURL(file));
+      }
+
+      setMessage({ text: '', type: '' });
+      setImageFiles(validFiles);
+      setImagePreviews(previews);
     }
   };
 
@@ -143,9 +171,9 @@ export default function AdminPage() {
     setPrice('');
     setIsPromo(false);
     setOldPrice('');
-    setImageFile(null);
-    setCurrentImageUrl('');
-    setImagePreview(null);
+    setImageFiles([]);
+    setCurrentImageUrls([]);
+    setImagePreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -156,9 +184,13 @@ export default function AdminPage() {
     setPrice(product.price.toString());
     setIsPromo(product.isPromo || false);
     setOldPrice(product.oldPrice ? product.oldPrice.toString() : '');
-    setCurrentImageUrl(product.imageUrl);
-    setImagePreview(product.imageUrl);
-    setImageFile(null);
+    
+    // Suporte a legado (imageUrl) e novo modelo (imageUrls)
+    const urls = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls : (product.imageUrl ? [product.imageUrl] : []);
+    
+    setCurrentImageUrls(urls);
+    setImagePreviews(urls);
+    setImageFiles([]);
     setMessage({ text: '', type: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -191,13 +223,8 @@ export default function AdminPage() {
       return;
     }
 
-    if (!editingId && !imageFile && !currentImageUrl) {
-      setMessage({ text: 'Selecione uma imagem para o produto.', type: 'error' });
-      return;
-    }
-
-    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
-      setMessage({ text: 'A imagem é muito grande. O tamanho máximo permitido é 5MB.', type: 'error' });
+    if (!editingId && imageFiles.length === 0 && currentImageUrls.length === 0) {
+      setMessage({ text: 'Selecione pelo menos uma imagem para o produto.', type: 'error' });
       return;
     }
 
@@ -205,25 +232,28 @@ export default function AdminPage() {
     setMessage({ text: '', type: '' });
 
     try {
-      let finalImageUrl = currentImageUrl;
+      let finalImageUrls = [...currentImageUrls];
 
-      // Se houver um novo arquivo de imagem, converte para Base64
-      if (imageFile) {
+      // Se houver novos arquivos de imagem, converte para Base64
+      if (imageFiles.length > 0) {
         try {
-          setMessage({ text: 'Otimizando imagem...', type: 'success' });
-          // Converte a imagem para uma string Base64 leve (WebP)
-          finalImageUrl = await compressImageToBase64(imageFile);
+          setMessage({ text: 'Otimizando imagens...', type: 'success' });
+          finalImageUrls = [];
           
-          // Verifica se o tamanho da string Base64 não excede o limite do Firestore (~1MB)
-          // 1MB em Base64 é aproximadamente 1.33MB de caracteres
-          if (finalImageUrl.length > 1048487) {
-            setMessage({ text: 'A imagem otimizada ainda é muito grande. Tente uma foto com menos detalhes.', type: 'error' });
-            setIsSubmitting(false);
-            return;
+          for (const file of imageFiles) {
+            const base64String = await compressImageToBase64(file);
+            
+            // Verifica se o tamanho da string Base64 não excede ~1MB (limite por campo, vamos usar array então o total também tem limite mas por imagem é mais seguro)
+            if (base64String.length > 1048487) {
+              setMessage({ text: `A imagem ${file.name} otimizada ainda é muito grande. Tente uma foto mais leve.`, type: 'error' });
+              setIsSubmitting(false);
+              return;
+            }
+            finalImageUrls.push(base64String);
           }
         } catch (uploadError: any) {
           console.error("Erro ao processar imagem:", uploadError);
-          setMessage({ text: 'Erro ao processar a imagem.', type: 'error' });
+          setMessage({ text: 'Erro ao processar as imagens.', type: 'error' });
           setIsSubmitting(false);
           return;
         }
@@ -233,9 +263,14 @@ export default function AdminPage() {
         name: name.trim(),
         description: description.trim(),
         price: parseFloat(price),
-        imageUrl: finalImageUrl,
+        imageUrls: finalImageUrls,
         isPromo: isPromo
       };
+
+      // Se existir ao menos uma imagem, salva a primeira no campo antigo por compatibilidade
+      if (finalImageUrls.length > 0) {
+        productData.imageUrl = finalImageUrls[0];
+      }
 
       if (isPromo && oldPrice) {
         productData.oldPrice = parseFloat(oldPrice);
@@ -414,34 +449,39 @@ export default function AdminPage() {
               )}
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Imagem da Galeria</label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-peach transition-colors relative overflow-hidden group">
-                  {imagePreview ? (
-                    <div className="absolute inset-0 w-full h-full">
-                      <Image src={imagePreview} alt="Preview" fill className="object-cover opacity-50 group-hover:opacity-30 transition-opacity" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="bg-ocean text-white px-3 py-1 rounded-lg text-sm font-medium">Trocar Imagem</span>
-                      </div>
-                    </div>
-                  ) : (
+                <label className="block text-sm font-bold text-gray-700 mb-1">Imagens da Galeria (Máx 3)</label>
+                <div className="mt-1 flex flex-col gap-4">
+                  <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-peach transition-colors relative group">
                     <div className="space-y-1 text-center">
                       <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="flex text-sm text-gray-600 justify-center">
                         <span className="relative cursor-pointer bg-white rounded-md font-medium text-ocean hover:text-peach focus-within:outline-none">
-                          <span>Fazer upload de um arquivo</span>
+                          <span>Selecionar Imagens</span>
                         </span>
                       </div>
                       <p className="text-xs text-gray-500">PNG, JPG, WEBP até 5MB</p>
                     </div>
+                    <input 
+                      ref={fileInputRef}
+                      type="file" 
+                      accept="image/*"
+                      multiple={true}
+                      onChange={handleImageChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      required={!editingId && currentImageUrls.length === 0}
+                    />
+                  </div>
+
+                  {/* Previews das Imagens */}
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden bg-gray-100">
+                          <Image src={preview} alt={`Preview ${index + 1}`} fill className="object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <input 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    required={!editingId && !currentImageUrl}
-                  />
                 </div>
               </div>
 
@@ -489,7 +529,7 @@ export default function AdminPage() {
                 <div key={product.id} className={`bg-white p-4 rounded-xl shadow-sm border transition-all ${editingId === product.id ? 'border-peach ring-2 ring-peach/20' : 'border-gray-100 hover:border-gray-300'}`}>
                   <div className="flex gap-4">
                     <div className="relative w-20 h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                      <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
+                      <Image src={(product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls[0] : (product.imageUrl || 'https://picsum.photos/400')} alt={product.name} fill className="object-cover" />
                     </div>
                     <div className="flex-grow min-w-0">
                       <h3 className="font-bold text-ocean truncate">{product.name}</h3>

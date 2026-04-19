@@ -85,16 +85,43 @@ export default function ProductCard({ product }: { product: Product }) {
   const whatsappMessage = encodeURIComponent(`Olá, gostei da peça ${product.name} de ${formatPrice(product.price)} e gostaria de saber a disponibilidade`);
   const whatsappUrl = `https://wa.me/5522998556724?text=${whatsappMessage}`;
 
+  const imagesToShow = product.imageUrls && product.imageUrls.length > 0 
+    ? product.imageUrls 
+    : [product.imageUrl || 'https://picsum.photos/seed/fashion/400/500'];
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col">
-      <div className="relative aspect-[3/4] w-full bg-gray-100">
-        <Image 
-          src={product.imageUrl || 'https://picsum.photos/seed/fashion/400/500'} 
-          alt={product.name}
-          fill
-          className="object-cover"
-          referrerPolicy="no-referrer"
-        />
+      <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
+        {imagesToShow.length > 1 ? (
+          <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+            {imagesToShow.map((imgUrl, idx) => (
+              <div key={idx} className="relative min-w-full h-full snap-start">
+                <Image 
+                  src={imgUrl} 
+                  alt={`${product.name} - Imagem ${idx + 1}`}
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Image 
+            src={imagesToShow[0]} 
+            alt={product.name}
+            fill
+            className="object-cover"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        {imagesToShow.length > 1 && (
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+            {imagesToShow.map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/70 shadow-sm" />
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="p-5 flex-grow flex flex-col">

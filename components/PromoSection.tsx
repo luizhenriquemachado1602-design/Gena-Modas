@@ -12,7 +12,8 @@ interface PromoProduct {
   description: string;
   oldPrice?: number;
   price: number;
-  imageUrl: string;
+  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export default function PromoSection() {
@@ -59,17 +60,44 @@ export default function PromoSection() {
           {promoProducts.map((product) => {
             const whatsappMessage = encodeURIComponent(`Olá, quero aproveitar a oferta especial da peça ${product.name} por ${formatPrice(product.price)}!`);
             const whatsappUrl = `https://wa.me/5522998556724?text=${whatsappMessage}`;
+            
+            const imagesToShow = product.imageUrls && product.imageUrls.length > 0 
+                ? product.imageUrls 
+                : [product.imageUrl || 'https://picsum.photos/seed/fashion/400/500'];
 
             return (
               <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-peach/30 flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-2/5 aspect-[3/4] sm:aspect-auto bg-gray-100">
-                  <Image 
-                    src={product.imageUrl} 
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                <div className="relative w-full sm:w-2/5 aspect-[3/4] sm:aspect-auto bg-gray-100 overflow-hidden">
+                  {imagesToShow.length > 1 ? (
+                    <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                      {imagesToShow.map((imgUrl, idx) => (
+                        <div key={idx} className="relative min-w-full h-full snap-start">
+                          <Image 
+                            src={imgUrl} 
+                            alt={`${product.name} - Imagem ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Image 
+                      src={imagesToShow[0]} 
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  {imagesToShow.length > 1 && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                      {imagesToShow.map((_, i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/70 shadow-sm" />
+                      ))}
+                    </div>
+                  )}
                   <div className="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
                     Oferta Especial
                   </div>

@@ -50,12 +50,13 @@ service cloud.firestore {
 
     // Domain Validators
     function isValidProduct() {
-      let allowedFields = ['name', 'description', 'price', 'imageUrl', 'reactions', 'isPromo', 'oldPrice'];
+      let allowedFields = ['name', 'description', 'price', 'imageUrl', 'imageUrls', 'reactions', 'isPromo', 'oldPrice'];
       return request.resource.data.keys().hasOnly(allowedFields) &&
              validStringLength('name', 1, 100) &&
              validStringLength('description', 1, 1000) &&
              isPositive('price') &&
-             validStringLength('imageUrl', 1, 1048487) &&
+             (!('imageUrl' in request.resource.data) || validStringLength('imageUrl', 0, 1048487)) &&
+             (!('imageUrls' in request.resource.data) || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 3)) &&
              request.resource.data.reactions is map &&
              (!('isPromo' in request.resource.data) || request.resource.data.isPromo is bool) &&
              (!('oldPrice' in request.resource.data) || (request.resource.data.oldPrice is number && request.resource.data.oldPrice >= 0));

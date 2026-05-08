@@ -70,6 +70,13 @@ service cloud.firestore {
              request.resource.data.createdAt is timestamp;
     }
 
+    function isValidClique() {
+      return hasOnlyAllowedFields(['modelo_peca', 'productId', 'createdAt']) &&
+             validStringLength('modelo_peca', 1, 100) &&
+             validStringLength('productId', 1, 100) &&
+             request.resource.data.createdAt is timestamp;
+    }
+
     function isValidReactionUpdate() {
       // Only the 'reactions' field can be changed
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
@@ -82,6 +89,13 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidProduct();
       allow delete: if isAdmin();
       allow update: if isAdmin() || isValidReactionUpdate();
+    }
+
+    match /cliques_vitrine/{cliqueId} {
+      allow read: if isAdmin();
+      allow create: if isValidClique();
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /comments/{commentId} {

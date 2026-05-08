@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Tag } from 'lucide-react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface PromoProduct {
@@ -74,7 +74,7 @@ export default function PromoSection() {
                         <div key={idx} className="relative min-w-full h-full snap-start">
                           <Image 
                             src={imgUrl} 
-                            alt={`${product.name} - Imagem ${idx + 1}`}
+                            alt={`${product.name} - Gena Modas Búzios${imagesToShow.length > 1 ? ` - Imagem ${idx + 1}` : ''}`}
                             fill
                             className="object-cover"
                             referrerPolicy="no-referrer"
@@ -85,7 +85,7 @@ export default function PromoSection() {
                   ) : (
                     <Image 
                       src={imagesToShow[0]} 
-                      alt={product.name}
+                      alt={`${product.name} - Gena Modas Búzios`}
                       fill
                       className="object-cover"
                       referrerPolicy="no-referrer"
@@ -114,14 +114,23 @@ export default function PromoSection() {
                     <span className="font-bold text-2xl text-ocean">{formatPrice(product.price)}</span>
                   </div>
                   
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    data-product-name={product.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Log click directly in Firestore
+                      addDoc(collection(db, 'cliques_vitrine'), {
+                        productId: product.id,
+                        modelo_peca: product.name,
+                        createdAt: serverTimestamp()
+                      }).catch(console.error);
+
+                      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                    }}
                     className="inline-block w-full bg-ocean hover:bg-ocean/90 text-white text-center font-bold py-3 rounded-xl transition-colors mt-auto"
                   >
                     COMPRAR AGORA
-                  </a>
+                  </button>
                 </div>
               </div>
             );

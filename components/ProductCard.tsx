@@ -98,7 +98,7 @@ export default function ProductCard({ product }: { product: Product }) {
               <div key={idx} className="relative min-w-full h-full snap-start">
                 <Image 
                   src={imgUrl} 
-                  alt={`${product.name} - Imagem ${idx + 1}`}
+                  alt={`${product.name} - Gena Modas Búzios${imagesToShow.length > 1 ? ` - Imagem ${idx + 1}` : ''}`}
                   fill
                   className="object-cover"
                   referrerPolicy="no-referrer"
@@ -109,7 +109,7 @@ export default function ProductCard({ product }: { product: Product }) {
         ) : (
           <Image 
             src={imagesToShow[0]} 
-            alt={product.name}
+            alt={`${product.name} - Gena Modas Búzios`}
             fill
             className="object-cover"
             referrerPolicy="no-referrer"
@@ -202,14 +202,24 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
 
       {/* WhatsApp Button */}
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        data-product-name={product.name}
+        onClick={(e) => {
+          e.preventDefault();
+          // Log click directly in Firestore (as requested, replacing Supabase for consistency)
+          addDoc(collection(db, 'cliques_vitrine'), {
+            productId: product.id,
+            modelo_peca: product.name,
+            createdAt: serverTimestamp()
+          }).catch(console.error); // We don't await so not to block user interaction
+
+          // Open WhatsApp immediately
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        }}
         className="block w-full bg-gold hover:bg-gold/90 text-white text-center font-bold py-4 transition-colors"
       >
         CONTATAR LOJISTA
-      </a>
+      </button>
     </div>
   );
 }

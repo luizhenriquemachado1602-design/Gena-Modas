@@ -20,6 +20,7 @@ interface Product {
   imageUrls?: string[];
   isPromo?: boolean;
   oldPrice?: number;
+  clickCount?: number;
 }
 
 // Função para otimizar a imagem e converter para Base64
@@ -101,7 +102,7 @@ export default function AdminPage() {
     if (user && user.email && ADMIN_EMAILS.includes(user.email)) {
       setLoadingProducts(true);
       const q = query(collection(db, 'products'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+      const unsubscribeProds = onSnapshot(q, (snapshot) => {
         const prods: Product[] = [];
         snapshot.forEach((doc) => {
           prods.push({ id: doc.id, ...doc.data() } as Product);
@@ -112,7 +113,30 @@ export default function AdminPage() {
         console.error("Erro ao buscar produtos:", error);
         setLoadingProducts(false);
       });
-      return () => unsubscribe();
+
+      // Get clicks count
+      const qClicks = query(collection(db, 'cliques_vitrine'));
+      const unsubscribeClicks = onSnapshot(qClicks, (snapshot) => {
+        const clickCounts: Record<string, number> = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.productId) {
+             clickCounts[data.productId] = (clickCounts[data.productId] || 0) + 1;
+          }
+        });
+        
+        setProducts(prevProducts => prevProducts.map(p => ({
+          ...p,
+          clickCount: clickCounts[p.id] || 0
+        })));
+      }, (error) => {
+        console.error("Erro ao buscar cliques:", error);
+      });
+
+      return () => {
+        unsubscribeProds();
+        unsubscribeClicks();
+      };
     }
   }, [user]);
 
@@ -537,11 +561,18 @@ export default function AdminPage() {
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
                       </p>
                       <div className="flex gap-2 mt-auto">
-                        {product.isPromo && (
-                          <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded-md uppercase self-start mb-2">
-                            Promo
+                        <div className="text-xs text-gray-500 mb-2 flex items-center justify-between w-full pr-2">
+                          {product.isPromo && (
+                            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded-md uppercase self-start">
+                              Promo
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1" title="Acessos via WhatsApp no botão 'Comprar'">
+                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold">
+                               Cliques: {product.clickCount || 0}
+                            </span>
                           </span>
-                        )}
+                        </div>
                       </div>
                       <div className="flex gap-2 mt-auto">
                         <button 

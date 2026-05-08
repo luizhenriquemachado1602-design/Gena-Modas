@@ -17,10 +17,19 @@ export const metadata: Metadata = {
   title: 'Gena Modas | Búzios 2026',
   description: 'Boutique de Moda Feminina (Luxo ao Beachwear) em Armação de Búzios.',
   manifest: '/manifest.json',
+  applicationName: 'Gena Modas',
+  appleWebApp: {
+    capable: true,
+    title: 'Gena Modas',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: '#b03d5d',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

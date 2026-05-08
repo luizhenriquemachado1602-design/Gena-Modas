@@ -1,6 +1,7 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
 import './globals.css'; // Global styles
+import PwaRegistry from '@/components/PwaRegistry';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -15,12 +16,20 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Gena Modas | Búzios 2026',
   description: 'Boutique de Moda Feminina (Luxo ao Beachwear) em Armação de Búzios.',
+  manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#b03d5d',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="pt-br" className={`${playfair.variable} ${inter.variable}`}>
-      <body className="font-sans" suppressHydrationWarning>{children}</body>
+      <body className="font-sans" suppressHydrationWarning>
+        <PwaRegistry />
+        {children}
+      </body>
     </html>
   );
 }

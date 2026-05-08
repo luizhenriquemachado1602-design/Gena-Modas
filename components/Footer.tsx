@@ -45,7 +45,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-white/10 text-center text-sm text-gray-400">
-        &copy; {new Date().getFullYear()} Gena Modas. Todos os direitos reservados.
+        Moda e Sofisticação no coração de Búzios | Gena Modas
       </div>
     </footer>
   );

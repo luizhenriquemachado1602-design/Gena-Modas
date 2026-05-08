@@ -7,8 +7,8 @@ export default function Header() {
         <div className="flex items-center gap-2 text-ocean">
           <ShoppingBag className="h-6 w-6" />
           <div>
-            <h1 className="font-bold text-xl tracking-widest leading-none">GENA MODAS</h1>
-            <span className="text-[10px] uppercase tracking-wider text-gray-500">Armação de Búzios</span>
+            <h1 className="font-bold text-xl tracking-widest leading-none">Gena Modas</h1>
+            <span className="text-[10px] uppercase tracking-wider text-gray-500">A Sua Loja de Roupa e Estilo em Búzios</span>
           </div>
         </div>
         <button className="p-2 text-ocean hover:bg-peach/20 rounded-full transition-colors">

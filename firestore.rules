@@ -98,6 +98,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isValidComment();

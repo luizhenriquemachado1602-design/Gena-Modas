@@ -140,14 +140,16 @@ export default function ProductCard({ product }: { product: Product }) {
                 <button
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
-                  className="flex flex-col items-center min-w-[40px] group"
+                  className="flex flex-col items-center justify-center min-w-[50px] h-[50px] rounded-full bg-pink-50 hover:bg-pink-100 border border-pink-100 group transition-colors shadow-sm"
                 >
                   <span className="text-xl group-hover:scale-125 transition-all duration-300 transform">
                     {emoji}
                   </span>
-                  <span className="text-[10px] text-gray-400 font-medium mt-1">
-                    {count > 0 ? count : ''}
-                  </span>
+                  {count > 0 && (
+                    <span className="text-[10px] text-pink-500 font-bold mt-0.5">
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}

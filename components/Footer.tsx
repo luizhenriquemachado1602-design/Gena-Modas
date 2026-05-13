@@ -7,7 +7,7 @@ export default function Footer() {
         <div>
           <h2 className="font-bold text-2xl mb-4 text-gold">GENA MODAS</h2>
           <p className="text-gray-300 text-sm">
-            Sofisticação praiana, exclusividade e "Trend 2026". A sua boutique de luxo ao beachwear em Búzios.
+            Sofisticação praiana, exclusividade e &quot;Trend 2026&quot;. A sua boutique de luxo ao beachwear em Búzios.
           </p>
         </div>
         

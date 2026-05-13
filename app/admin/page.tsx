@@ -7,6 +7,7 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, que
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { PackagePlus, LogOut, Loader2, Edit, Trash2, Image as ImageIcon, X } from 'lucide-react';
 import Header from '@/components/Header';
+import AdminHeroSettings from '@/components/AdminHeroSettings';
 import Image from 'next/image';
 
 const ADMIN_EMAILS = ['luizhenriquemachado1602@gmail.com', 'genaina0011111@gmail.com'];
@@ -529,6 +530,8 @@ export default function AdminPage() {
 
         {/* Lista de Produtos (Direita) */}
         <div className="lg:col-span-7">
+          <AdminHeroSettings />
+
           <div className="flex justify-between items-center mb-6 hidden lg:flex">
             <h2 className="text-xl font-bold text-ocean font-serif">Produtos Cadastrados ({products.length})</h2>
             <button 

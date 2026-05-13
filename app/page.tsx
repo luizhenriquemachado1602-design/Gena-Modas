@@ -3,6 +3,7 @@ import Footer from '@/components/Footer';
 import ProductList from '@/components/ProductList';
 import SeedDatabase from '@/components/SeedDatabase';
 import PromoSection from '@/components/PromoSection';
+import HeroSection from '@/components/HeroSection';
 
 export default function Home() {
   return (
@@ -11,14 +12,7 @@ export default function Home() {
       
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="bg-ocean text-white py-20 px-4 text-center">
-          <div className="max-w-3xl mx-auto">
-            <h1 className="font-bold text-4xl md:text-6xl mb-6 text-gold font-serif tracking-wider">Gena Modas</h1>
-            <p className="text-lg md:text-2xl text-gray-300 mb-8 font-light tracking-wide">
-              A Sua Loja de Roupa e Estilo em Búzios
-            </p>
-          </div>
-        </section>
+        <HeroSection />
 
         {/* Promo Section */}
         <PromoSection />

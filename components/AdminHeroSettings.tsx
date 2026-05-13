@@ -2,55 +2,51 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import { Loader2, Image as ImageIcon, CheckCircle, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
-const compressImageToBase64 = (file: File): Promise<string> => {
+const compressImage = (file: File): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
-      exportHeroCompress(event, resolve, reject);
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Canvas to Blob failed'));
+        }, 'image/webp', 0.85);
+      };
+      img.onerror = (error) => reject(error);
     };
     reader.onerror = (error) => reject(error);
   });
 };
-
-const exportHeroCompress = (event: ProgressEvent<FileReader>, resolve: (value: string) => void, reject: (reason?: any) => void) => {
-  const img = new window.Image();
-  img.src = event.target?.result as string;
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    // For hero banner, allow higher res like 1920x1080
-    const MAX_WIDTH = 1920;
-    const MAX_HEIGHT = 1080;
-    let width = img.width;
-    let height = img.height;
-
-    if (width > height) {
-      if (width > MAX_WIDTH) {
-        height *= MAX_WIDTH / width;
-        width = MAX_WIDTH;
-      }
-    } else {
-      if (height > MAX_HEIGHT) {
-        width *= MAX_HEIGHT / height;
-        height = MAX_HEIGHT;
-      }
-    }
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx?.drawImage(img, 0, 0, width, height);
-    
-    // We increase quality a bit since it's a hero image
-    const base64String = canvas.toDataURL('image/webp', 0.85);
-    resolve(base64String);
-  };
-  img.onerror = (error) => reject(error);
-};
-
 
 export default function AdminHeroSettings() {
   const [heroImage, setHeroImage] = useState<string | null>(null);
@@ -87,22 +83,20 @@ export default function AdminHeroSettings() {
 
       setPreview(URL.createObjectURL(file));
       setIsSubmitting(true);
-      setMessage('Otimizando imagem...');
+      setMessage('Otimizando e enviando imagem...');
 
       try {
-        const base64String = await compressImageToBase64(file);
+        const optimizedBlob = await compressImage(file);
         
-        // Verifica tamanho excedente ~1MB
-        if (base64String.length > 1048487) {
-          setMessage('A imagem otimizada é muito grande para salvar direto. Tente uma foto mais leve.');
-          setIsSubmitting(false);
-          return;
-        }
+        const timestamp = Date.now();
+        const imageRef = ref(storage, `hero/banner-${timestamp}.webp`);
+        await uploadBytes(imageRef, optimizedBlob);
+        const downloadUrl = await getDownloadURL(imageRef);
 
         const docRef = doc(db, 'settings', 'hero');
-        await setDoc(docRef, { imageUrl: base64String }, { merge: true });
+        await setDoc(docRef, { imageUrl: downloadUrl, storagePath: `hero/banner-${timestamp}.webp` }, { merge: true });
         
-        setHeroImage(base64String);
+        setHeroImage(downloadUrl);
         setMessage('Imagem de Destaque atualizada!');
         setTimeout(() => setMessage(''), 3000);
       } catch (err) {
@@ -118,7 +112,18 @@ export default function AdminHeroSettings() {
     setIsSubmitting(true);
     try {
       const docRef = doc(db, 'settings', 'hero');
-      await updateDoc(docRef, { imageUrl: null });
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists() && docSnap.data().storagePath) {
+        try {
+          const imageRef = ref(storage, docSnap.data().storagePath);
+          await deleteObject(imageRef);
+        } catch (e) {
+          console.warn('Erro ao deletar imagem do storage', e);
+        }
+      }
+
+      await updateDoc(docRef, { imageUrl: null, storagePath: null });
       setHeroImage(null);
       setPreview(null);
       setMessage('Imagem removida com sucesso!');

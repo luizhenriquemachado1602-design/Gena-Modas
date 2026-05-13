@@ -142,7 +142,7 @@ export default function ProductCard({ product }: { product: Product }) {
                   onClick={() => handleReaction(emoji)}
                   className="flex flex-col items-center min-w-[40px] group"
                 >
-                  <span className="text-xl filter grayscale group-hover:grayscale-0 group-hover:scale-125 transition-all duration-300">
+                  <span className="text-xl group-hover:scale-125 transition-all duration-300 transform">
                     {emoji}
                   </span>
                   <span className="text-[10px] text-gray-400 font-medium mt-1">
